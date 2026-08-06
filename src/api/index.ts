@@ -5,3 +5,6 @@ export { companyApi } from "./company.api";
 export { userApi } from "./user.api";
 export { roleApi } from "./role.api";
 export * from "./dashboard.api";
+export * from "./brands.api";
+export * from "./categories.api";
+export * from "./units.api";

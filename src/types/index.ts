@@ -8,3 +8,6 @@ export type * from "./company.types";
 export type * from "./user.types";
 export type * from "./role.types";
 export * from "./reports.types";
+export * from "./brands.types";
+export * from "./categories.types";
+export * from "./units.types";

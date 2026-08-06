@@ -26,14 +26,27 @@ export const API_ENDPOINTS = {
     BY_ID: (id: string) => `/Role/${id}`,
   },
 
+  // Brands Management
+  BRANDS: {
+    BASE: "/Brands",
+    BY_ID: (id: string) => `/Brands/${id}`,
+  },
+
+  // Categories Management
+  CATEGORIES: {
+    BASE: "/ProductCategories",
+    BY_ID: (id: string) => `/ProductCategories/${id}`,
+  },
+
+  // Units Management
+  UNITS: {
+    BASE: "/Units",
+    BY_ID: (id: string) => `/Units/${id}`,
+  },
   // Future modules — uncomment as backend APIs are completed
   // PRODUCT: {
   //   BASE: "/Product",
   //   BY_ID: (id: string) => `/Product/${id}`,
-  // },
-  // CATEGORY: {
-  //   BASE: "/Category",
-  //   BY_ID: (id: string) => `/Category/${id}`,
   // },
   // COMPONENT: {
   //   BASE: "/Component",

@@ -21,6 +21,8 @@ export const ROUTES = {
   PRODUCTS: "/products",
   PRODUCT_DETAIL: (id: string) => `/products/${id}`,
   CATEGORIES: "/products/categories",
+  BRANDS: "/products/brands",
+  UNITS: "/products/units",
 
   // Bill of Materials
   BOM: "/bom",

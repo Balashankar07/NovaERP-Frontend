@@ -23,6 +23,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 const sidebarNavItems = [
   { title: "Dashboard", href: ROUTES.DASHBOARD, icon: LayoutDashboard },
   { title: "Company", href: "/company", icon: Building2 },
+  { title: "Brands", href: ROUTES.BRANDS, icon: Boxes }, // Reusing Boxes or another icon
+  { title: "Categories", href: ROUTES.CATEGORIES, icon: Boxes }, // Using Boxes for now
+  { title: "Units", href: ROUTES.UNITS, icon: Boxes },
   { title: "Production", href: "/production", icon: Factory },
   { title: "Inventory", href: "/inventory", icon: Boxes },
   { title: "Warehouse", href: "/warehouse", icon: Warehouse },

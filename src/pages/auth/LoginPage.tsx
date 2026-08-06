@@ -21,6 +21,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { authApi } from "@/api/auth.api";
 import { ROUTES } from "@/routes";
+import { toast } from "@/utils/toast";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,8 +105,10 @@ export default function LoginPage() {
       
       if (error.response?.data?.message) {
         setErrorMsg(error.response.data.message);
+        toast.error(error.response.data.message);
       } else if (error.response?.status === 401) {
         setErrorMsg("Invalid email or password.");
+        toast.error("Invalid email or password.");
       } else {
         setErrorMsg("An unexpected error occurred. Please try again.");
       }
