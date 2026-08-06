@@ -9,3 +9,4 @@ export * from "./brands.api";
 export * from "./categories.api";
 export * from "./units.api";
 export * from "./products.api";
+export * from "./suppliers.api";

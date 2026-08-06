@@ -29,6 +29,7 @@ const sidebarNavItems = [
   { title: "Production", href: "/production", icon: Factory },
   { title: "Inventory", href: "/inventory", icon: Boxes },
   { title: "Warehouse", href: "/warehouse", icon: Warehouse },
+  { title: "Suppliers", href: ROUTES.SUPPLIERS, icon: Building2 },
   { title: "Procurement", href: "/procurement", icon: ShoppingCart },
   { title: "Sales", href: "/sales", icon: TrendingUp },
   { title: "Finance", href: "/finance", icon: CircleDollarSign },
