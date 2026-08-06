@@ -8,3 +8,4 @@ export * from "./dashboard.api";
 export * from "./brands.api";
 export * from "./categories.api";
 export * from "./units.api";
+export * from "./products.api";

@@ -43,6 +43,10 @@ export const API_ENDPOINTS = {
     BASE: "/Units",
     BY_ID: (id: string) => `/Units/${id}`,
   },
+  PRODUCTS: {
+    BASE: "/Products",
+    BY_ID: (id: string) => `/Products/${id}`,
+  },
   // Future modules — uncomment as backend APIs are completed
   // PRODUCT: {
   //   BASE: "/Product",

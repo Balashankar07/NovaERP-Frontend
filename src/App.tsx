@@ -7,6 +7,7 @@ import { DashboardPage } from "@/pages/dashboard";
 import { BrandsListPage } from "@/pages/brands";
 import { CategoriesListPage } from "@/pages/categories";
 import { UnitsListPage } from "@/pages/units";
+import { ProductsListPage } from "@/pages/products";
 import { ForbiddenPage, NotFoundPage } from "@/pages/error";
 import { ROUTES } from "@/routes";
 
@@ -27,6 +28,7 @@ function App() {
               <Route path={ROUTES.BRANDS} element={<BrandsListPage />} />
               <Route path={ROUTES.CATEGORIES} element={<CategoriesListPage />} />
               <Route path={ROUTES.UNITS} element={<UnitsListPage />} />
+              <Route path={ROUTES.PRODUCTS} element={<ProductsListPage />} />
             </Route>
           </Route>
           
