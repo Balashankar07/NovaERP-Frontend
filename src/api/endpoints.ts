@@ -91,7 +91,12 @@ export const API_ENDPOINTS = {
   //   BASE: "/Warranty",
   //   BY_ID: (id: string) => `/Warranty/${id}`,
   // },
-  // REPORT: {
-  //   BASE: "/Report",
-  // },
+  REPORTS: {
+    DASHBOARD: "/Reports/dashboard",
+    INVENTORY: "/Reports/inventory",
+    PRODUCTION: "/Reports/production",
+    SALES: "/Reports/sales",
+    WARRANTY: "/Reports/warranty",
+    AUDIT: "/Reports/audit",
+  },
 } as const;

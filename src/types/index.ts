@@ -7,3 +7,4 @@ export type * from "./api.types";
 export type * from "./company.types";
 export type * from "./user.types";
 export type * from "./role.types";
+export * from "./reports.types";

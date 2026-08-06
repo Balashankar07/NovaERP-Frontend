@@ -4,3 +4,4 @@ export { authApi } from "./auth.api";
 export { companyApi } from "./company.api";
 export { userApi } from "./user.api";
 export { roleApi } from "./role.api";
+export * from "./dashboard.api";
