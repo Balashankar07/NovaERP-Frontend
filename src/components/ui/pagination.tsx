@@ -1,6 +1,6 @@
-import React from "react";
+
 import { Button } from "./button";
-import { PaginatedResponse, PaginationParams } from "@/types/api.types";
+import { PaginatedResponse } from "@/types/api.types";
 
 interface PaginationProps {
   data: PaginatedResponse<any>;
@@ -20,7 +20,7 @@ export function Pagination({ data, onPageChange }: PaginationProps) {
           variant="outline"
           size="sm"
           onClick={() => onPageChange(data.pageNumber - 1)}
-          disabled={!data.hasPreviousPage}
+          disabled={data.pageNumber <= 1}
         >
           Previous
         </Button>
@@ -28,7 +28,7 @@ export function Pagination({ data, onPageChange }: PaginationProps) {
           variant="outline"
           size="sm"
           onClick={() => onPageChange(data.pageNumber + 1)}
-          disabled={!data.hasNextPage}
+          disabled={data.pageNumber >= data.totalPages}
         >
           Next
         </Button>

@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Eye, LayoutGrid } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit2, Trash2, Eye, LayoutGrid, RefreshCw } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useCrudTable } from "@/hooks/use-crud-table";
 import { toast } from "@/utils/toast";
@@ -7,17 +7,30 @@ import { unitsApi } from "@/api/units.api";
 import { UnitDto, CreateUnitDto, UpdateUnitDto } from "@/types/units.types";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { LoadingView, ErrorView, EmptyView } from "@/components/ui/state-views";
+import { Checkbox } from "@/components/ui/checkbox";
+import { LoadingView, ErrorView } from "@/components/ui/state-views";
+import { EmptyState } from "@/components/ui/EmptyState";
 import { Pagination } from "@/components/ui/pagination";
 import { SortableHeader } from "@/components/ui/sortable-header";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { PermissionButton } from "@/components/common/permission-button";
 
 import { UnitFormDialog } from "./components/UnitFormDialog";
 import { UnitDetailsDialog } from "./components/UnitDetailsDialog";
 
 export function UnitsListPage() {
   const { hasPermission } = usePermissions();
+  const canView = hasPermission("Permissions.Units.View");
   const canCreate = hasPermission("Permissions.Units.Create");
   const canUpdate = hasPermission("Permissions.Units.Update");
   const canDelete = hasPermission("Permissions.Units.Delete");
@@ -34,7 +47,8 @@ export function UnitsListPage() {
     refresh
   } = useCrudTable<UnitDto>({
     fetchFn: unitsApi.getAll,
-    defaultSortBy: "Name"
+    defaultSortBy: "Name",
+    defaultSortOrder: "asc"
   });
 
   // Dialogs State
@@ -42,46 +56,37 @@ export function UnitsListPage() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
+  
   const [selectedUnit, setSelectedUnit] = useState<UnitDto | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleCreateOrUpdate = async (formData: CreateUnitDto | UpdateUnitDto) => {
-    setIsSubmitting(true);
-    
-    const operation = selectedUnit
-      ? unitsApi.update(selectedUnit.id, formData as UpdateUnitDto)
-      : unitsApi.create(formData as CreateUnitDto);
-
-    toast.promise(operation, {
-      loading: selectedUnit ? "Updating unit..." : "Creating unit...",
-      success: () => {
-        setIsFormOpen(false);
-        refresh();
-        return selectedUnit ? "Unit updated successfully." : "Unit created successfully.";
-      },
-      error: "Failed to save unit.",
-    });
-
-    operation.finally(() => setIsSubmitting(false));
+    if (selectedUnit) {
+      await unitsApi.update(selectedUnit.id, formData as UpdateUnitDto);
+      toast.success(`Unit "${formData.name}" updated successfully.`);
+    } else {
+      await unitsApi.create(formData as CreateUnitDto);
+      toast.success(`Unit "${formData.name}" created successfully.`);
+    }
+    setIsFormOpen(false);
+    refresh();
   };
 
   const handleDelete = async () => {
     if (!selectedUnit) return;
-    setIsSubmitting(true);
+    setIsDeleting(true);
 
-    const operation = unitsApi.delete(selectedUnit.id);
-
-    toast.promise(operation, {
-      loading: "Deleting unit...",
-      success: () => {
-        setIsDeleteOpen(false);
-        refresh();
-        return "Unit deleted successfully.";
-      },
-      error: "Failed to delete unit.",
-    });
-
-    operation.finally(() => setIsSubmitting(false));
+    try {
+      await unitsApi.delete(selectedUnit.id);
+      toast.success("Unit deleted successfully.");
+      setIsDeleteOpen(false);
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete unit.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const openForm = (unit?: UnitDto) => {
@@ -99,145 +104,221 @@ export function UnitsListPage() {
     setIsDeleteOpen(true);
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && data) {
+      setSelectedRowIds(new Set(data.items.map(i => i.id)));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    const newSet = new Set(selectedRowIds);
+    if (checked) newSet.add(id);
+    else newSet.delete(id);
+    setSelectedRowIds(newSet);
+  };
+
+  const hasSelections = selectedRowIds.size > 0;
+
+  const renderedRows = useMemo(() => {
+    if (viewState === "loading") {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="h-64">
+            <LoadingView title="Loading Units..." />
+          </TableCell>
+        </TableRow>
+      );
+    }
+    
+    if (viewState === "error") {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="h-64">
+            <ErrorView title="Failed to load units" onRetry={refresh} />
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    if (viewState === "empty" || (viewState === "success" && data?.items.length === 0)) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="h-64">
+            <EmptyState 
+              title="No units found" 
+              description={queryParams.search ? "Try adjusting your search query." : "Get started by adding your first unit of measurement."}
+              icon={<LayoutGrid className="w-8 h-8 text-slate-400" />}
+              action={canCreate ? { label: "Add Unit", onClick: () => openForm() } : undefined}
+            />
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    if (viewState === "success" && data) {
+      return data.items.map((unit) => (
+        <TableRow 
+          key={unit.id} 
+          className={`group transition-colors ${selectedRowIds.has(unit.id) ? 'bg-indigo-50/40 hover:bg-indigo-50/60' : 'hover:bg-slate-50/50'}`}
+        >
+          <TableCell className="pl-4">
+            <Checkbox 
+              checked={selectedRowIds.has(unit.id)}
+              onCheckedChange={(checked) => handleSelectRow(unit.id, checked === true)}
+              aria-label={`Select ${unit.name}`}
+            />
+          </TableCell>
+          <TableCell className="font-medium text-slate-900 truncate" title={unit.name}>{unit.name}</TableCell>
+          <TableCell>
+            <span className="font-mono text-slate-600 bg-slate-50/50 rounded-md inline-block px-2 py-0.5 border border-slate-100 truncate max-w-[100px]" title={unit.abbreviation}>
+              {unit.abbreviation}
+            </span>
+          </TableCell>
+          <TableCell className="text-slate-500 truncate" title={unit.description || ""}>
+            {unit.description || "—"}
+          </TableCell>
+          <TableCell>
+            <StatusBadge isActive={unit.isActive} />
+          </TableCell>
+          <TableCell className="text-right pr-6">
+            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-slate-500 hover:text-indigo-600"
+                onClick={() => openDetails(unit)}
+                title="View Details"
+                aria-label={`View Details for ${unit.name}`}
+              >
+                <Eye className="h-4 w-4" />
+              </Button>
+              {canUpdate && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:text-blue-600"
+                  onClick={() => openForm(unit)}
+                  title="Edit Unit"
+                  aria-label={`Edit ${unit.name}`}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-slate-500 hover:text-rose-600"
+                  onClick={() => openDelete(unit)}
+                  title="Delete Unit"
+                  aria-label={`Delete ${unit.name}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      ));
+    }
+    return null;
+  }, [viewState, data, queryParams.search, selectedRowIds, canCreate, canUpdate, canDelete]);
+
+  if (!canView) {
+    return <ErrorView title="Access Denied" description="You don't have permission to view units." />;
+  }
+
   return (
-    <div className="flex flex-col h-full bg-slate-50/50 p-6 lg:p-8 space-y-6">
-      {/* Header */}
+    <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Units of Measurement</h1>
           <p className="text-sm text-slate-500 mt-1">Manage standard units used for product quantities and dimensions.</p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <form onSubmit={handleSearch} className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-            <Input
-              type="text"
-              placeholder="Search units..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className="pl-9 h-10 w-full bg-white shadow-sm border-slate-200"
-            />
-          </form>
-          {canCreate && (
-            <Button onClick={() => openForm()} className="h-10 bg-indigo-600 hover:bg-indigo-700 shadow-sm shrink-0">
-              <Plus className="h-4 w-4 mr-2" />
-              Add Unit
-            </Button>
-          )}
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="h-9" onClick={refresh} title="Refresh Data">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <PermissionButton 
+            permission="Permissions.Units.Create"
+            onClick={() => openForm()} 
+            aria-label="Add Unit" 
+            className="h-9 bg-indigo-600 hover:bg-indigo-700 shadow-sm shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Unit
+          </PermissionButton>
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex-1 flex flex-col">
-        {viewState === "loading" && <LoadingView title="Loading Units..." />}
-        {viewState === "error" && <ErrorView title="Failed to load units" />}
-        {viewState === "empty" && (
-          <EmptyView 
-            title="No units found" 
-            description="Get started by adding your first unit of measurement."
-            icon={<LayoutGrid className="w-6 h-6 text-slate-400" />}
-          />
-        )}
+      <div className="bg-white border border-slate-200/60 rounded-xl shadow-sm overflow-hidden flex flex-col relative">
+        <DataTableToolbar 
+          searchQuery={searchInput}
+          onSearchChange={setSearchInput}
+          onSearchSubmit={handleSearch}
+          searchPlaceholder="Search units..."
+          hasSelections={hasSelections}
+          selectedCount={selectedRowIds.size}
+          onDeleteSelected={() => setIsDeleteOpen(true)}
+          onCancelSelection={() => setSelectedRowIds(new Set())}
+          itemTypeName="units"
+          deletePermission="Permissions.Units.Delete"
+        />
+        <div className="overflow-x-auto">
+          <Table className="min-w-[800px] w-full table-fixed">
+            <TableHeader>
+              <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                <TableHead className="w-[50px] pl-4">
+                  <Checkbox 
+                    checked={!!(data && data.items.length > 0 && selectedRowIds.size === data.items.length)}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
+                <SortableHeader
+                  field="Name"
+                  label="Unit Name"
+                  currentSortBy={queryParams.sortBy}
+                  currentSortOrder={queryParams.sortOrder}
+                  onSort={toggleSort}
+                  className="w-[250px]"
+                />
+                <SortableHeader
+                  field="Abbreviation"
+                  label="Abbreviation"
+                  currentSortBy={queryParams.sortBy}
+                  currentSortOrder={queryParams.sortOrder}
+                  onSort={toggleSort}
+                  className="w-[150px]"
+                />
+                <TableHead className="w-[200px]">Description</TableHead>
+                <SortableHeader
+                  field="IsActive"
+                  label="Status"
+                  currentSortBy={queryParams.sortBy}
+                  currentSortOrder={queryParams.sortOrder}
+                  onSort={toggleSort}
+                  className="w-[120px]"
+                />
+                <TableHead className="text-right pr-6 w-[120px]">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {renderedRows}
+            </TableBody>
+          </Table>
+        </div>
 
-        {viewState === "success" && data && (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left whitespace-nowrap">
-                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
-                  <tr>
-                    <SortableHeader
-                      field="Name"
-                      label="Unit Name"
-                      currentSortBy={queryParams.sortBy}
-                      currentSortOrder={queryParams.sortOrder}
-                      onSort={toggleSort}
-                    />
-                    <SortableHeader
-                      field="Abbreviation"
-                      label="Abbreviation"
-                      currentSortBy={queryParams.sortBy}
-                      currentSortOrder={queryParams.sortOrder}
-                      onSort={toggleSort}
-                    />
-                    <th className="px-6 py-4">Description</th>
-                    <SortableHeader
-                      field="IsActive"
-                      label="Status"
-                      currentSortBy={queryParams.sortBy}
-                      currentSortOrder={queryParams.sortOrder}
-                      onSort={toggleSort}
-                    />
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-slate-700">
-                  {data.items.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                        No units match your search query.
-                      </td>
-                    </tr>
-                  ) : (
-                    data.items.map((unit) => (
-                      <tr key={unit.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-6 py-4 font-medium text-slate-900">{unit.name}</td>
-                        <td className="px-6 py-4 font-mono text-slate-600 bg-slate-50/50 rounded-md inline-block mt-2 ml-4 mb-2 mr-2 px-2 py-0.5 border border-slate-100">{unit.abbreviation}</td>
-                        <td className="px-6 py-4 text-slate-500 max-w-[300px] truncate">
-                          {unit.description || "—"}
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            unit.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"
-                          }`}>
-                            {unit.isActive ? "Active" : "Inactive"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600"
-                            onClick={() => openDetails(unit)}
-                            title="View Details"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {canUpdate && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-indigo-600"
-                              onClick={() => openForm(unit)}
-                              title="Edit Unit"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                          {canDelete && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 text-slate-400 hover:text-red-600"
-                              onClick={() => openDelete(unit)}
-                              title="Delete Unit"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-
+        {data && data.totalPages > 1 && (
+          <div className="p-4 border-t border-slate-100">
             <Pagination 
               data={data} 
               onPageChange={setPage} 
             />
-          </>
+          </div>
         )}
       </div>
 
@@ -246,7 +327,6 @@ export function UnitsListPage() {
         onClose={() => setIsFormOpen(false)}
         onSubmit={handleCreateOrUpdate}
         unit={selectedUnit}
-        isLoading={isSubmitting}
       />
 
       <UnitDetailsDialog
@@ -255,15 +335,12 @@ export function UnitsListPage() {
         unit={selectedUnit}
       />
 
-      <ConfirmDialog
+      <ConfirmDeleteDialog
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Unit"
-        description={`Are you sure you want to delete "${selectedUnit?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        isDestructive
-        isLoading={isSubmitting}
+        itemName="Unit"
+        isLoading={isDeleting}
       />
     </div>
   );

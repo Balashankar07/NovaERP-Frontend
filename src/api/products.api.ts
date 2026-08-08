@@ -1,49 +1,21 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "./endpoints";
-import { PaginatedResponse, ApiResponse } from "@/types";
+import { PaginatedResponse, PaginationParams } from "@/types/api.types";
 import { ProductDto, CreateProductDto, UpdateProductDto } from "@/types/products.types";
 
 export const productsApi = {
-  getAll: async (
-    pageNumber: number = 1,
-    pageSize: number = 10,
-    search?: string,
-    sortBy?: string,
-    sortOrder?: "asc" | "desc"
-  ) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<ProductDto>>>(
-      API_ENDPOINTS.PRODUCTS.BASE,
-      {
-        params: { pageNumber, pageSize, search, sortBy, sortOrder },
-      }
-    );
-    return response.data;
-  },
+  getAll: (params?: PaginationParams & { sortBy?: string, sortOrder?: string }) => 
+    api.get<PaginatedResponse<ProductDto>>(API_ENDPOINTS.PRODUCTS.BASE, { params }),
 
-  getById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<ProductDto>>(
-      API_ENDPOINTS.PRODUCTS.BY_ID(id)
-    );
-    return response.data;
-  },
+  getById: (id: string) => 
+    api.get<ProductDto>(API_ENDPOINTS.PRODUCTS.BY_ID(id)),
 
-  create: async (data: CreateProductDto) => {
-    const response = await apiClient.post<ApiResponse<ProductDto>>(
-      API_ENDPOINTS.PRODUCTS.BASE,
-      data
-    );
-    return response.data;
-  },
+  create: (data: CreateProductDto) => 
+    api.post<ProductDto>(API_ENDPOINTS.PRODUCTS.BASE, data),
 
-  update: async (id: string, data: UpdateProductDto) => {
-    const response = await apiClient.put<ApiResponse<ProductDto>>(
-      API_ENDPOINTS.PRODUCTS.BY_ID(id),
-      data
-    );
-    return response.data;
-  },
+  update: (id: string, data: UpdateProductDto) => 
+    api.put<ProductDto>(API_ENDPOINTS.PRODUCTS.BY_ID(id), data),
 
-  delete: async (id: string) => {
-    await apiClient.delete(API_ENDPOINTS.PRODUCTS.BY_ID(id));
-  },
+  delete: (id: string) => 
+    api.delete<boolean>(API_ENDPOINTS.PRODUCTS.BY_ID(id)),
 };

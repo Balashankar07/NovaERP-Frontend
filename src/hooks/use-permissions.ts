@@ -1,26 +1,60 @@
+import { CurrentUser } from "@/types";
+import { ROUTES } from "@/routes";
 import { useAuth } from "./use-auth";
 
-/**
- * Frontend role-to-permission mapping.
- * In a real-world app with dynamic permissions, this array would be fetched
- * from the backend during login. For this implementation, we map roles to allowed
- * permissions, or grant all to Administrator.
- */
+// Centralized privileged-role mechanism
+export const PRIVILEGED_ROLES = ["Super Admin", "Administrator", "System Administrator"];
+
+export function getDefaultRouteForUser(user: CurrentUser | null): string {
+  if (!user) return ROUTES.DASHBOARD;
+
+  if (PRIVILEGED_ROLES.includes(user.role)) {
+    return ROUTES.DASHBOARD;
+  }
+  
+  if (user.permissions?.includes("Permissions.Dashboard.View")) {
+    return ROUTES.DASHBOARD;
+  }
+  if (user.permissions?.includes("Permissions.Products.View")) {
+    return ROUTES.PRODUCTS;
+  }
+  if (user.permissions?.includes("Permissions.Brands.View")) {
+    return ROUTES.BRANDS;
+  }
+  if (user.permissions?.includes("Permissions.ProductCategories.View")) {
+    return ROUTES.CATEGORIES;
+  }
+  if (user.permissions?.includes("Permissions.Units.View")) {
+    return ROUTES.UNITS;
+  }
+  if (user.permissions?.includes("Permissions.Suppliers.View")) {
+    return ROUTES.SUPPLIERS;
+  }
+
+  return ROUTES.DASHBOARD;
+}
+
 export function usePermissions() {
   const { user } = useAuth();
 
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
 
-    // Administrators have full access
-    if (user.role === "Administrator") return true;
+    // Administrators have full bypass access
+    if (PRIVILEGED_ROLES.includes(user.role)) return true;
 
-    // Define module-specific role access (adjust based on actual business logic)
-    // For Brands, Categories and Units, Procurement and Production managers might have view access
-    if (permission.startsWith("Permissions.Brands.View") || permission.startsWith("Permissions.ProductCategories.View") || permission.startsWith("Permissions.Units.View")) {
-      return ["Procurement Manager", "Production Manager"].includes(user.role);
+    // IMPORTANT: Per enterprise architecture rules, the frontend MUST NOT 
+    // infer permissions from business roles to avoid duplicating backend logic.
+    // The backend is the single source of truth.
+    //
+    // If the backend JWT token (or a future endpoint) provides verified permissions,
+    // we consume them here.
+    if ('permissions' in user && Array.isArray((user as any).permissions)) {
+      return (user as any).permissions.includes(permission);
     }
 
+    // In the absence of a verified permissions claim from the backend, we DO NOT
+    // grant UI access. This avoids the flash of unauthorized content and /403 loops.
     return false;
   };
 

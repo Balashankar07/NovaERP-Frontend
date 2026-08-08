@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 import {
   CircleDollarSign,
   Factory,
-  Boxes,
   Warehouse,
   ShoppingCart,
   Users,

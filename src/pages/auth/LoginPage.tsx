@@ -1,27 +1,26 @@
 import { useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { 
-  Loader2, 
   Mail, 
-  Lock, 
-  Eye, 
-  EyeOff, 
   Factory, 
-  Boxes, 
-  BarChart3,
-  AlertCircle,
   Cpu,
-  CheckCircle2
+  CheckCircle2,
+  Boxes,
+  Eye,
+  EyeOff,
+  Lock,
+  Loader2
 } from "lucide-react";
 
 import { useAuth } from "@/hooks/use-auth";
+import { getDefaultRouteForUser } from "@/hooks/use-permissions";
 import { authApi } from "@/api/auth.api";
-import { ROUTES } from "@/routes";
-import { toast } from "@/utils/toast";
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,7 +37,7 @@ import {
 const loginSchema = z.object({
   email: z.string().min(1, "Email is required").email("Invalid email format"),
   password: z.string().min(1, "Password is required"),
-  rememberMe: z.boolean().default(false),
+  rememberMe: z.boolean(),
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
@@ -69,11 +68,7 @@ const StatusIndicator = ({ text }: { text: string }) => (
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { login } = useAuth();
-  const [errorMsg, setErrorMsg] = useState<string | null>(
-    searchParams.get("expired") === "true" ? "Your session has expired. Please log in again." : null
-  );
   const [showPassword, setShowPassword] = useState(false);
 
   const form = useForm<LoginFormValues>({
@@ -85,8 +80,9 @@ export default function LoginPage() {
     },
   });
 
-  const onSubmit = async (data: LoginFormValues) => {
-    setErrorMsg(null);
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
+
+  const onSubmit = withValidation(async (data) => {
     try {
       const response = await authApi.login({
         email: data.email,
@@ -99,21 +95,13 @@ export default function LoginPage() {
 
       login(response.accessToken, user, data.rememberMe);
 
-      navigate(ROUTES.DASHBOARD, { replace: true });
+      const targetRoute = getDefaultRouteForUser(user);
+      navigate(targetRoute, { replace: true });
     } catch (error: any) {
       localStorage.removeItem("accessToken");
-      
-      if (error.response?.data?.message) {
-        setErrorMsg(error.response.data.message);
-        toast.error(error.response.data.message);
-      } else if (error.response?.status === 401) {
-        setErrorMsg("Invalid email or password.");
-        toast.error("Invalid email or password.");
-      } else {
-        setErrorMsg("An unexpected error occurred. Please try again.");
-      }
+      throw error; // Rethrow to let withValidation handle it
     }
-  };
+  });
 
   return (
     <motion.div 
@@ -128,7 +116,7 @@ export default function LoginPage() {
         
         {/* Subtle Ambient Backgrounds (<8% opacity) */}
         <div className="absolute inset-0 pointer-events-none z-0">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
+          <div className="absolute inset-0 bg-[url('/noise.svg')] opacity-[0.03] mix-blend-overlay"></div>
           
           {/* Faint Grid Overlay */}
           <div className="absolute inset-0 opacity-[0.02] bg-[linear-gradient(rgba(255,255,255,1)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,1)_1px,transparent_1px)] bg-[size:32px_32px] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_10%,transparent_100%)]"></div>
@@ -246,24 +234,11 @@ export default function LoginPage() {
             <p className="text-slate-500 text-[0.95rem] mt-1.5 font-normal">Enter your credentials to access the platform.</p>
           </div>
 
-          <AnimatePresence mode="wait">
-            {errorMsg && (
-              <motion.div 
-                initial={{ opacity: 0, y: -5, height: 0 }}
-                animate={{ opacity: 1, y: 0, height: "auto" }}
-                exit={{ opacity: 0, y: -5, height: 0 }}
-                className="mb-8 overflow-hidden"
-              >
-                <div className="flex items-center space-x-3 p-3.5 rounded-xl bg-red-50/50 border border-red-100 text-red-600 text-sm">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" strokeWidth={2} />
-                  <p className="font-medium">{errorMsg}</p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6" noValidate>
+              <ValidationSummary errors={globalErrors} />
               <FormField
                 control={form.control}
                 name="email"
@@ -357,10 +332,10 @@ export default function LoginPage() {
               <div className="pt-5">
                 <Button
                   type="submit"
-                  disabled={form.formState.isSubmitting}
+                  disabled={isSubmitting}
                   className="w-full h-11 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-medium text-sm shadow-[0_2px_4px_rgba(79,70,229,0.15),inset_0_1px_0_rgba(255,255,255,0.2)] hover:shadow-[0_4px_12px_rgba(79,70,229,0.2),inset_0_1px_0_rgba(255,255,255,0.2)] active:scale-[0.98] active:shadow-inner transition-all duration-200 disabled:opacity-60 disabled:pointer-events-none relative overflow-hidden"
                 >
-                  {form.formState.isSubmitting ? (
+                  {isSubmitting ? (
                     <div className="flex items-center justify-center space-x-2">
                       <Loader2 className="h-4 w-4 animate-spin opacity-80" />
                       <span>Authenticating</span>

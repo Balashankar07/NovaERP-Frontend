@@ -13,6 +13,12 @@ export interface LoginResponse {
   role: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface CurrentUser {
   isAuthenticated: boolean;
   userId: string;
@@ -20,6 +26,7 @@ export interface CurrentUser {
   role: string;
   companyId: string;
   branchId: string;
+  permissions: string[];
 }
 
 // User roles as defined in the backend

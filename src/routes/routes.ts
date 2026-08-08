@@ -8,6 +8,9 @@ export const ROUTES = {
   // Dashboard
   DASHBOARD: "/",
 
+  // Profile
+  PROFILE: "/profile",
+
   // Error
   FORBIDDEN: "/403",
 

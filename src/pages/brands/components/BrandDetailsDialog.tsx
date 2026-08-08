@@ -1,4 +1,3 @@
-import React from "react";
 import { Modal } from "@/components/ui/modal";
 import { BrandDto } from "@/types/brands.types";
 import { CheckCircle2, XCircle } from "lucide-react";

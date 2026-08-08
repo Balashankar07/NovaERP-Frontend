@@ -4,6 +4,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
 
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
+
 import { ProductDto, CreateProductDto, UpdateProductDto } from "@/types/products.types";
 import { BrandDto } from "@/types/brands.types";
 import { CategoryDto } from "@/types/categories.types";
@@ -47,8 +50,8 @@ const productSchema = z.object({
   maximumStock: z.coerce.number().min(0, "Must be positive"),
   reorderLevel: z.coerce.number().min(0, "Must be positive"),
   barcode: z.string().optional(),
-  imageUrl: z.string().optional(),
-  isActive: z.boolean().default(true),
+  imageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  isActive: z.boolean(),
 });
 
 type ProductFormValues = z.infer<typeof productSchema>;
@@ -58,7 +61,6 @@ interface ProductFormDialogProps {
   onClose: () => void;
   product?: ProductDto;
   onSubmit: (data: CreateProductDto | UpdateProductDto) => Promise<void>;
-  isSubmitting: boolean;
 }
 
 export function ProductFormDialog({
@@ -66,7 +68,6 @@ export function ProductFormDialog({
   onClose,
   product,
   onSubmit,
-  isSubmitting,
 }: ProductFormDialogProps) {
   const isEditing = !!product;
   
@@ -95,6 +96,8 @@ export function ProductFormDialog({
       isActive: true,
     },
   });
+
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
 
   useEffect(() => {
     if (isOpen) {
@@ -144,9 +147,9 @@ export function ProductFormDialog({
     try {
       setIsLoadingDropdowns(true);
       const [brandsRes, categoriesRes, unitsRes] = await Promise.all([
-        brandsApi.getAll(1, 100),
-        categoriesApi.getAll(1, 100),
-        unitsApi.getAll(1, 100)
+        brandsApi.getAll({ pageNumber: 1, pageSize: 100 }),
+        categoriesApi.getAll({ pageNumber: 1, pageSize: 100 }),
+        unitsApi.getAll({ pageNumber: 1, pageSize: 100 })
       ]);
       setBrands(brandsRes.items);
       setCategories(categoriesRes.items);
@@ -158,9 +161,9 @@ export function ProductFormDialog({
     }
   };
 
-  const handleSubmit = async (data: ProductFormValues) => {
+  const handleSubmit = withValidation(async (data) => {
     await onSubmit(data);
-  };
+  });
 
   return (
     <Modal
@@ -175,7 +178,8 @@ export function ProductFormDialog({
         </div>
       ) : (
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4" noValidate>
+            <ValidationSummary errors={globalErrors} />
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -431,7 +435,7 @@ export function ProductFormDialog({
               </Button>
               <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white" disabled={isSubmitting}>
                 {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {isEditing ? "Update" : "Save"} Product
+                {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Product" : "Save Product")}
               </Button>
             </div>
           </form>

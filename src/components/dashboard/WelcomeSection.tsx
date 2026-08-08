@@ -6,6 +6,12 @@ export function WelcomeSection() {
   const { user } = useAuth();
   const [time, setTime] = useState(new Date());
 
+  const getDisplayName = (email?: string) => {
+    if (!email) return "System Administrator";
+    const namePart = email.split("@")[0];
+    return namePart.charAt(0).toUpperCase() + namePart.slice(1);
+  };
+
   useEffect(() => {
     const timer = setInterval(() => setTime(new Date()), 60000);
     return () => clearInterval(timer);
@@ -29,7 +35,7 @@ export function WelcomeSection() {
         <h1 className="text-[1.75rem] font-bold text-slate-900 tracking-tight leading-tight">
           Good Morning,
           <br />
-          {user?.userName || "System Administrator"}
+          {getDisplayName(user?.email)}
         </h1>
         <p className="text-slate-500 text-[15px] mt-2">
           Here's today's operational overview across your manufacturing enterprise.

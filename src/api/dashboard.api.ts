@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "./endpoints";
 import { 
   DashboardSummaryDto, 
@@ -8,53 +8,24 @@ import {
   WarrantyReportDto, 
   AuditReportDto 
 } from "@/types/reports.types";
-import { ApiResponse, PaginatedResponse, PaginationParams } from "@/types/api.types";
+import { PaginatedResponse, PaginationParams } from "@/types/api.types";
 
 export const dashboardApi = {
-  getSummary: async () => {
-    const response = await apiClient.get<ApiResponse<DashboardSummaryDto>>(
-      API_ENDPOINTS.REPORTS.DASHBOARD
-    );
-    return response.data;
-  },
+  getSummary: () => 
+    api.get<DashboardSummaryDto>(API_ENDPOINTS.REPORTS.DASHBOARD),
 
-  getInventoryReport: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<InventoryReportDto>>>(
-      API_ENDPOINTS.REPORTS.INVENTORY,
-      { params }
-    );
-    return response.data;
-  },
+  getInventoryReport: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<InventoryReportDto>>(API_ENDPOINTS.REPORTS.INVENTORY, { params }),
 
-  getProductionReport: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<ProductionReportDto>>>(
-      API_ENDPOINTS.REPORTS.PRODUCTION,
-      { params }
-    );
-    return response.data;
-  },
+  getProductionReport: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<ProductionReportDto>>(API_ENDPOINTS.REPORTS.PRODUCTION, { params }),
 
-  getSalesReport: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<SalesReportDto>>>(
-      API_ENDPOINTS.REPORTS.SALES,
-      { params }
-    );
-    return response.data;
-  },
+  getSalesReport: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<SalesReportDto>>(API_ENDPOINTS.REPORTS.SALES, { params }),
 
-  getWarrantyReport: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<WarrantyReportDto>>>(
-      API_ENDPOINTS.REPORTS.WARRANTY,
-      { params }
-    );
-    return response.data;
-  },
+  getWarrantyReport: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<WarrantyReportDto>>(API_ENDPOINTS.REPORTS.WARRANTY, { params }),
 
-  getAuditReport: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<AuditReportDto>>>(
-      API_ENDPOINTS.REPORTS.AUDIT,
-      { params }
-    );
-    return response.data;
-  },
+  getAuditReport: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<AuditReportDto>>(API_ENDPOINTS.REPORTS.AUDIT, { params }),
 };

@@ -39,35 +39,21 @@ apiClient.interceptors.response.use(
     const status = error.response.status;
 
     switch (status) {
-      case 400:
-        toast.error("Invalid request.");
-        break;
       case 401:
-        toast.error("Your session has expired. Please log in again.");
-        localStorage.removeItem("accessToken");
-        localStorage.removeItem("user");
-        sessionStorage.removeItem("accessToken");
-        sessionStorage.removeItem("user");
-        window.location.href = "/login?expired=true";
+        // Dispatch event instead of hard page reload to preserve UX state
+        window.dispatchEvent(new Event("session:expired"));
         break;
       case 403:
         toast.error("You do not have permission to perform this action.");
-        window.location.href = "/403";
         break;
       case 404:
         toast.error("Requested resource was not found.");
         break;
-      case 409:
-        toast.error("Conflict occurred. The resource might already exist.");
-        break;
-      case 422:
-        toast.error("Validation failed. Please check your inputs.");
-        break;
       case 500:
         toast.error("Something went wrong. Please try again later.");
         break;
-      default:
-        toast.error("An unexpected error occurred.");
+      // Note: 400, 409, and 422 are deliberately ignored here.
+      // They are handled by the specific form validation hooks to prevent duplicate generic toasts.
     }
 
     return Promise.reject(error);

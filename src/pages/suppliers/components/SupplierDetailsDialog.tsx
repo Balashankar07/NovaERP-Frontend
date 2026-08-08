@@ -1,9 +1,8 @@
-import React from "react";
 import { SupplierDto } from "@/types/suppliers.types";
 import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Phone, Mail, Globe, MapPin, Building, CreditCard, Clock, FileText } from "lucide-react";
+import { Building2, Phone, MapPin, CreditCard, Clock, FileText } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 

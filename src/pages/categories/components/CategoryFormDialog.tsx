@@ -3,6 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
+
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +22,9 @@ import {
 import { CategoryDto, CreateCategoryDto, UpdateCategoryDto } from "@/types/categories.types";
 
 const categorySchema = z.object({
-  name: z.string().min(1, "Category name is required").max(100, "Name is too long"),
-  description: z.string().max(500, "Description is too long").nullable().optional(),
-  isActive: z.boolean().default(true),
+  name: z.string().min(1, "Category name is required"),
+  description: z.string().nullable(),
+  isActive: z.boolean(),
 });
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
@@ -30,10 +34,9 @@ interface CategoryFormDialogProps {
   onClose: () => void;
   onSubmit: (data: CreateCategoryDto | UpdateCategoryDto) => Promise<void>;
   category?: CategoryDto | null;
-  isLoading?: boolean;
 }
 
-export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoading }: CategoryFormDialogProps) {
+export function CategoryFormDialog({ isOpen, onClose, onSubmit, category }: CategoryFormDialogProps) {
   const isEditing = !!category;
 
   const form = useForm<CategoryFormValues>({
@@ -64,7 +67,9 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
     }
   }, [isOpen, category, form]);
 
-  const handleSubmit = async (values: CategoryFormValues) => {
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
+
+  const handleSubmit = withValidation(async (values) => {
     if (isEditing) {
       await onSubmit({
         name: values.name,
@@ -77,19 +82,20 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
         description: values.description || null,
       } as CreateCategoryDto);
     }
-  };
+  });
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={() => {
-        if (!isLoading) onClose();
+        if (!isSubmitting) onClose();
       }}
       title={isEditing ? "Edit Category" : "Create Category"}
       description={isEditing ? "Update the details of the category." : "Add a new category to the system."}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" noValidate>
+          <ValidationSummary errors={globalErrors} />
           <FormField
             control={form.control}
             name="name"
@@ -97,7 +103,7 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
               <FormItem>
                 <FormLabel>Category Name <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., Electronics" {...field} disabled={isLoading} />
+                  <Input placeholder="e.g., Electronics" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -115,7 +121,7 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
                     placeholder="Brief description of the category..." 
                     {...field} 
                     value={field.value || ""} 
-                    disabled={isLoading} 
+                    disabled={isSubmitting} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -133,7 +139,7 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                     />
                   </FormControl>
@@ -153,23 +159,17 @@ export function CategoryFormDialog({ isOpen, onClose, onSubmit, category, isLoad
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !form.formState.isDirty}
+              disabled={isSubmitting || !form.formState.isDirty}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Category"
-              )}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Category" : "Save Category")}
             </Button>
           </div>
         </form>

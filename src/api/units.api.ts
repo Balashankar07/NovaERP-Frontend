@@ -1,59 +1,36 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "./endpoints";
 import { UnitDto, CreateUnitDto, UpdateUnitDto } from "@/types/units.types";
-import { PaginatedResponse, PaginationParams, ApiResponse } from "@/types/api.types";
+import { PaginatedResponse, PaginationParams } from "@/types/api.types";
 
 export const unitsApi = {
   /**
    * Retrieves a paginated list of units based on search, sorting, and pagination parameters.
    */
-  getAll: async (params: PaginationParams & { sortBy?: string, sortOrder?: string }) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<UnitDto>>>(
-      API_ENDPOINTS.UNITS.BASE,
-      { params }
-    );
-    return response.data.data;
-  },
+  getAll: (params: PaginationParams & { sortBy?: string, sortOrder?: string }) => 
+    api.get<PaginatedResponse<UnitDto>>(API_ENDPOINTS.UNITS.BASE, { params }),
 
   /**
    * Retrieves a single unit by its unique identifier.
    */
-  getById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<UnitDto>>(
-      API_ENDPOINTS.UNITS.BY_ID(id)
-    );
-    return response.data.data;
-  },
+  getById: (id: string) => 
+    api.get<UnitDto>(API_ENDPOINTS.UNITS.BY_ID(id)),
 
   /**
    * Creates a new unit.
    */
-  create: async (data: CreateUnitDto) => {
-    const response = await apiClient.post<ApiResponse<UnitDto>>(
-      API_ENDPOINTS.UNITS.BASE,
-      data
-    );
-    return response.data.data;
-  },
+  create: (data: CreateUnitDto) => 
+    api.post<UnitDto>(API_ENDPOINTS.UNITS.BASE, data),
 
   /**
    * Updates an existing unit by its unique identifier.
    */
-  update: async (id: string, data: UpdateUnitDto) => {
-    const response = await apiClient.put<ApiResponse<UnitDto>>(
-      API_ENDPOINTS.UNITS.BY_ID(id),
-      data
-    );
-    return response.data.data;
-  },
+  update: (id: string, data: UpdateUnitDto) => 
+    api.put<UnitDto>(API_ENDPOINTS.UNITS.BY_ID(id), data),
 
   /**
    * Deletes a unit by its unique identifier.
    */
-  delete: async (id: string) => {
-    const response = await apiClient.delete<ApiResponse<boolean>>(
-      API_ENDPOINTS.UNITS.BY_ID(id)
-    );
-    return response.data.data;
-  },
+  delete: (id: string) => 
+    api.delete<boolean>(API_ENDPOINTS.UNITS.BY_ID(id)),
 };

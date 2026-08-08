@@ -4,7 +4,7 @@ import { PaginatedResponse, PaginationParams } from "@/types/api.types";
 type ViewState = "loading" | "success" | "error" | "empty";
 
 export interface UseCrudTableOptions<TData> {
-  fetchFn: (params: PaginationParams & { sortBy?: string, sortOrder?: string }) => Promise<PaginatedResponse<TData>>;
+  fetchFn: (params: PaginationParams) => Promise<PaginatedResponse<TData>>;
   defaultSortBy?: string;
   defaultSortOrder?: "asc" | "desc";
   defaultPageSize?: number;
@@ -19,7 +19,7 @@ export function useCrudTable<TData>({
   const [viewState, setViewState] = useState<ViewState>("loading");
   const [data, setData] = useState<PaginatedResponse<TData> | null>(null);
 
-  const [queryParams, setQueryParams] = useState<PaginationParams & { sortBy?: string, sortOrder?: string }>({
+  const [queryParams, setQueryParams] = useState<PaginationParams>({
     pageNumber: 1,
     pageSize: defaultPageSize,
     search: "",
@@ -27,7 +27,24 @@ export function useCrudTable<TData>({
     sortOrder: defaultSortOrder,
   });
 
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, _setSearchInput] = useState("");
+
+  const setSearchInput = useCallback((value: string) => {
+    _setSearchInput(value);
+    
+    if (value.trim() === "") {
+      setQueryParams((prev) => {
+        if (prev.search === "") return prev;
+        return {
+          ...prev,
+          search: "",
+          pageNumber: 1,
+          sortBy: defaultSortBy,
+          sortOrder: defaultSortOrder,
+        };
+      });
+    }
+  }, [defaultSortBy, defaultSortOrder]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -50,9 +67,28 @@ export function useCrudTable<TData>({
     fetchData();
   }, [fetchData]);
 
+  const submitSearch = useCallback((explicitValue?: string) => {
+    const trimmed = (explicitValue !== undefined ? explicitValue : searchInput).trim();
+    
+    if (trimmed === "") {
+      setQueryParams((prev) => {
+        if (prev.search === "") return prev;
+        return {
+          ...prev,
+          search: "",
+          pageNumber: 1,
+          sortBy: defaultSortBy,
+          sortOrder: defaultSortOrder,
+        };
+      });
+    } else {
+      setQueryParams((prev) => ({ ...prev, search: trimmed, pageNumber: 1 }));
+    }
+  }, [searchInput, defaultSortBy, defaultSortOrder]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setQueryParams((prev) => ({ ...prev, search: searchInput, pageNumber: 1 }));
+    submitSearch();
   };
 
   const toggleSort = (field: string) => {
@@ -79,6 +115,7 @@ export function useCrudTable<TData>({
     searchInput,
     setSearchInput,
     handleSearch,
+    submitSearch,
     toggleSort,
     setPage,
     refresh,

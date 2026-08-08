@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import type { LoginRequest, LoginResponse, CurrentUser } from "@/types";
 
@@ -10,22 +10,13 @@ export const authApi = {
    * POST /api/Auth/login
    * Authenticates user and returns JWT token.
    */
-  login: async (data: LoginRequest): Promise<LoginResponse> => {
-    const response = await apiClient.post<any>(
-      API_ENDPOINTS.AUTH.LOGIN,
-      data
-    );
-    // Backend wraps response in ApiResponse<T> where T is LoginResponse
-    return response.data.data;
-  },
+  login: (data: LoginRequest): Promise<LoginResponse> => 
+    api.post<LoginResponse>(API_ENDPOINTS.AUTH.LOGIN, data),
 
   /**
    * GET /api/Auth/me
    * Returns current authenticated user info from JWT claims.
    */
-  getMe: async (): Promise<CurrentUser> => {
-    const response = await apiClient.get<any>(API_ENDPOINTS.AUTH.ME);
-    // Note: getMe backend doesn't wrap in ApiResponse, it just returns Ok(new { ... })
-    return response.data;
-  },
+  getMe: (): Promise<CurrentUser> => 
+    api.get<CurrentUser>(API_ENDPOINTS.AUTH.ME),
 };

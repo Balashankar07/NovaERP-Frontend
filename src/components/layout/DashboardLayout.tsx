@@ -9,7 +9,7 @@ export function DashboardLayout() {
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
-        <ScrollArea className="flex-1 bg-[#F8FAFC]">
+        <ScrollArea className="flex-1 min-h-0 bg-[#F8FAFC]">
           <main className="flex-1 px-4 py-8 lg:px-10 lg:py-8 max-w-[1600px] mx-auto w-full">
             <Outlet />
           </main>

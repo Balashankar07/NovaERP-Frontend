@@ -3,6 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
+
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,9 +22,9 @@ import {
 import { BrandDto, CreateBrandDto, UpdateBrandDto } from "@/types/brands.types";
 
 const brandSchema = z.object({
-  name: z.string().min(1, "Brand name is required").max(100, "Name is too long"),
-  description: z.string().max(500, "Description is too long").nullable().optional(),
-  isActive: z.boolean().default(true),
+  name: z.string().min(1, "Brand name is required"),
+  description: z.string().nullable(),
+  isActive: z.boolean(),
 });
 
 type BrandFormValues = z.infer<typeof brandSchema>;
@@ -30,10 +34,9 @@ interface BrandFormDialogProps {
   onClose: () => void;
   onSubmit: (data: CreateBrandDto | UpdateBrandDto) => Promise<void>;
   brand?: BrandDto | null;
-  isLoading?: boolean;
 }
 
-export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }: BrandFormDialogProps) {
+export function BrandFormDialog({ isOpen, onClose, onSubmit, brand }: BrandFormDialogProps) {
   const isEditing = !!brand;
 
   const form = useForm<BrandFormValues>({
@@ -64,7 +67,9 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
     }
   }, [isOpen, brand, form]);
 
-  const handleSubmit = async (values: BrandFormValues) => {
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
+
+  const handleSubmit = withValidation(async (values) => {
     // If not editing, omit isActive since it's not in CreateBrandDto
     if (isEditing) {
       await onSubmit({
@@ -78,19 +83,20 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
         description: values.description || null,
       } as CreateBrandDto);
     }
-  };
+  });
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={() => {
-        if (!isLoading) onClose();
+        if (!isSubmitting) onClose();
       }}
       title={isEditing ? "Edit Brand" : "Create Brand"}
       description={isEditing ? "Update the details of the brand." : "Add a new brand to the system."}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" noValidate>
+          <ValidationSummary errors={globalErrors} />
           <FormField
             control={form.control}
             name="name"
@@ -98,7 +104,7 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
               <FormItem>
                 <FormLabel>Brand Name <span className="text-red-500">*</span></FormLabel>
                 <FormControl>
-                  <Input placeholder="e.g., NovaTech" {...field} disabled={isLoading} />
+                  <Input placeholder="e.g., NovaTech" {...field} disabled={isSubmitting} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -116,7 +122,7 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
                     placeholder="Brief description of the brand..." 
                     {...field} 
                     value={field.value || ""} 
-                    disabled={isLoading} 
+                    disabled={isSubmitting} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -134,7 +140,7 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                     />
                   </FormControl>
@@ -154,23 +160,17 @@ export function BrandFormDialog({ isOpen, onClose, onSubmit, brand, isLoading }:
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !form.formState.isDirty}
+              disabled={isSubmitting || !form.formState.isDirty}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Brand"
-              )}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Brand" : "Save Brand")}
             </Button>
           </div>
         </form>

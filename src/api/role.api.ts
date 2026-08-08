@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import type { Role, CreateRoleRequest, UpdateRoleRequest } from "@/types";
 
@@ -9,43 +9,30 @@ export const roleApi = {
   /**
    * GET /api/Role
    */
-  getAll: async (): Promise<Role[]> => {
-    const response = await apiClient.get<any>(API_ENDPOINTS.ROLE.BASE);
-    return response.data.data;
-  },
+  getAll: (): Promise<Role[]> => 
+    api.get<Role[]>(API_ENDPOINTS.ROLE.BASE),
 
   /**
    * GET /api/Role/{id}
    */
-  getById: async (id: string): Promise<Role> => {
-    const response = await apiClient.get<any>(
-      API_ENDPOINTS.ROLE.BY_ID(id)
-    );
-    return response.data.data;
-  },
+  getById: (id: string): Promise<Role> => 
+    api.get<Role>(API_ENDPOINTS.ROLE.BY_ID(id)),
 
   /**
    * POST /api/Role
    */
-  create: async (data: CreateRoleRequest): Promise<Role> => {
-    const response = await apiClient.post<any>(
-      API_ENDPOINTS.ROLE.BASE,
-      data
-    );
-    return response.data.data;
-  },
+  create: (data: CreateRoleRequest): Promise<Role> => 
+    api.post<Role>(API_ENDPOINTS.ROLE.BASE, data),
 
   /**
    * PUT /api/Role/{id}
    */
-  update: async (id: string, data: UpdateRoleRequest): Promise<void> => {
-    await apiClient.put(API_ENDPOINTS.ROLE.BY_ID(id), data);
-  },
+  update: (id: string, data: UpdateRoleRequest): Promise<void> => 
+    api.put<void>(API_ENDPOINTS.ROLE.BY_ID(id), data),
 
   /**
    * DELETE /api/Role/{id}
    */
-  delete: async (id: string): Promise<void> => {
-    await apiClient.delete(API_ENDPOINTS.ROLE.BY_ID(id));
-  },
+  delete: (id: string): Promise<void> => 
+    api.delete<void>(API_ENDPOINTS.ROLE.BY_ID(id)),
 };

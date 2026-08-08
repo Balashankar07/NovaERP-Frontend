@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Plus, Search, Edit2, Trash2, Eye, Box, Image as ImageIcon } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit2, Trash2, Eye, Box, Download, Upload, RefreshCw } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { useCrudTable } from "@/hooks/use-crud-table";
 import { toast } from "@/utils/toast";
@@ -8,7 +8,8 @@ import { productsApi } from "@/api/products.api";
 import { ProductDto } from "@/types/products.types";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -17,11 +18,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+
 import { Pagination } from "@/components/ui/pagination";
 import { SortableHeader } from "@/components/ui/sortable-header";
-import { LoadingView, EmptyView, ErrorView } from "@/components/ui/state-views";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { LoadingView, ErrorView } from "@/components/ui/state-views";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { DataTableToolbar } from "@/components/ui/data-table-toolbar";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { PermissionButton } from "@/components/common/permission-button";
 
 import { ProductFormDialog } from "./components/ProductFormDialog";
 import { ProductDetailsDialog } from "./components/ProductDetailsDialog";
@@ -32,75 +38,58 @@ export default function ProductsListPage() {
   const canCreate = hasPermission("Permissions.Products.Create");
   const canUpdate = hasPermission("Permissions.Products.Update");
   const canDelete = hasPermission("Permissions.Products.Delete");
-
-  const [searchQuery, setSearchQuery] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | undefined>();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(new Set());
 
   const {
+    viewState,
     data,
-    loading,
-    error,
-    pageNumber,
-    pageSize,
-    search,
-    sortBy,
-    sortOrder,
-    totalRecords,
-    totalPages,
-    handleSort,
+    queryParams,
+    searchInput,
+    setSearchInput,
     handleSearch,
-    setPageNumber,
+    toggleSort,
+    setPage,
     refresh
   } = useCrudTable<ProductDto>({
-    fetchData: productsApi.getAll
+    fetchFn: productsApi.getAll,
+    defaultSortBy: "CreatedAt",
+    defaultSortOrder: "desc"
   });
 
-  const onSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleSearch(searchQuery);
-  };
+  // Removed onSearchSubmit as handleSearch can be used directly with standard pattern
 
   const handleCreateOrUpdate = async (formData: any) => {
-    setIsSubmitting(true);
-    
-    const operation = selectedProduct
-      ? productsApi.update(selectedProduct.id, formData)
-      : productsApi.create(formData);
-
-    toast.promise(operation, {
-      loading: selectedProduct ? "Updating product..." : "Creating product...",
-      success: () => {
-        setIsFormOpen(false);
-        refresh();
-        return selectedProduct ? "Product updated successfully." : "Product created successfully.";
-      },
-      error: "Failed to save product.",
-    });
-
-    operation.finally(() => setIsSubmitting(false));
+    if (selectedProduct) {
+      await productsApi.update(selectedProduct.id, formData);
+      toast.success(`Product "${formData.name}" updated successfully.`);
+    } else {
+      await productsApi.create(formData);
+      toast.success(`Product "${formData.name}" created successfully.`);
+    }
+    setIsFormOpen(false);
+    refresh();
   };
 
   const handleDelete = async () => {
     if (!selectedProduct) return;
-    setIsSubmitting(true);
+    setIsDeleting(true);
 
-    const operation = productsApi.delete(selectedProduct.id);
-
-    toast.promise(operation, {
-      loading: "Deleting product...",
-      success: () => {
-        setIsDeleteOpen(false);
-        refresh();
-        return "Product deleted successfully.";
-      },
-      error: "Failed to delete product.",
-    });
-
-    operation.finally(() => setIsSubmitting(false));
+    try {
+      await productsApi.delete(selectedProduct.id);
+      toast.success("Product deleted successfully.");
+      setIsDeleteOpen(false);
+      refresh();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete product.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const openForm = (product?: ProductDto) => {
@@ -118,8 +107,115 @@ export default function ProductsListPage() {
     setIsDeleteOpen(true);
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && data) {
+      setSelectedRowIds(new Set(data.items.map(i => i.id)));
+    } else {
+      setSelectedRowIds(new Set());
+    }
+  };
+
+  const handleSelectRow = (id: string, checked: boolean) => {
+    const newSet = new Set(selectedRowIds);
+    if (checked) newSet.add(id);
+    else newSet.delete(id);
+    setSelectedRowIds(newSet);
+  };
+
+  const hasSelections = selectedRowIds.size > 0;
+
+  const renderedRows = useMemo(() => {
+    if (viewState === "loading") {
+      return (
+        <TableRow>
+          <TableCell colSpan={8} className="h-64">
+            <LoadingView />
+          </TableCell>
+        </TableRow>
+      );
+    }
+    
+    if (viewState === "error") {
+      return (
+        <TableRow>
+          <TableCell colSpan={8} className="h-64">
+            <ErrorView description="Failed to load products" onRetry={refresh} />
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    if (viewState === "empty" || (viewState === "success" && data?.items.length === 0)) {
+      return (
+        <TableRow>
+          <TableCell colSpan={8} className="h-64">
+            <EmptyState 
+              icon={<Box className="w-8 h-8 text-slate-400" />}
+              title="No products found" 
+              description={queryParams.search ? "Try adjusting your search query." : "Add your first product to get started."}
+              action={canCreate ? { label: "Add Product", onClick: () => openForm() } : undefined}
+            />
+          </TableCell>
+        </TableRow>
+      );
+    }
+
+    if (viewState === "success" && data) {
+      return data.items.map((product) => (
+        <TableRow 
+          key={product.id} 
+          className={`group transition-colors ${selectedRowIds.has(product.id) ? 'bg-indigo-50/40 hover:bg-indigo-50/60' : 'hover:bg-slate-50/50'}`}
+        >
+          <TableCell className="pl-4">
+            <Checkbox 
+              checked={selectedRowIds.has(product.id)}
+              onCheckedChange={(checked) => handleSelectRow(product.id, checked === true)}
+              aria-label={`Select ${product.name}`}
+            />
+          </TableCell>
+          <TableCell>
+            <div className="h-10 w-10 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+              <ImageWithFallback src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+            </div>
+          </TableCell>
+          <TableCell className="font-medium text-slate-900 truncate" title={product.name}>{product.name}</TableCell>
+          <TableCell>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-slate-700 truncate" title={product.productCode}>{product.productCode}</span>
+              <span className="text-xs text-slate-500 truncate" title={product.sku}>{product.sku}</span>
+            </div>
+          </TableCell>
+          <TableCell className="text-slate-600 truncate" title={product.brand?.name || "-"}>{product.brand?.name || "-"}</TableCell>
+          <TableCell className="text-slate-600 truncate" title={product.category?.name || "-"}>{product.category?.name || "-"}</TableCell>
+          <TableCell className="text-slate-900 font-medium text-right tabular-nums">{formatCurrency(product.sellingPrice)}</TableCell>
+          <TableCell>
+            <StatusBadge isActive={product.isActive} />
+          </TableCell>
+          <TableCell className="text-right pr-6">
+            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-indigo-600" onClick={() => openDetails(product)} title="View Details" aria-label={`View Details for ${product.name}`}>
+                <Eye className="w-4 h-4" />
+              </Button>
+              {canUpdate && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => openForm(product)} title="Edit Product" aria-label={`Edit ${product.name}`}>
+                  <Edit2 className="w-4 h-4" />
+                </Button>
+              )}
+              {canDelete && (
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-rose-600" onClick={() => openDelete(product)} title="Delete Product" aria-label={`Delete ${product.name}`}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
+          </TableCell>
+        </TableRow>
+      ));
+    }
+    return null;
+  }, [viewState, data, queryParams.search, selectedRowIds, canCreate, canUpdate, canDelete]);
+
   if (!canView) {
-    return <ErrorView title="Access Denied" message="You don't have permission to view products." />;
+    return <ErrorView title="Access Denied" description="You don't have permission to view products." />;
   }
 
   return (
@@ -130,135 +226,76 @@ export default function ProductsListPage() {
           <p className="text-sm text-slate-500 mt-1">Manage master products, variants, and pricing.</p>
         </div>
         
-        {canCreate && (
-          <Button 
+        <div className="flex items-center gap-2">
+          <PermissionButton permission="Permissions.Products.Export" variant="outline" size="sm" className="h-9">
+            <Download className="w-4 h-4 mr-2" />
+            Export
+          </PermissionButton>
+          <PermissionButton permission="Permissions.Products.Import" variant="outline" size="sm" className="h-9">
+            <Upload className="w-4 h-4 mr-2" />
+            Import
+          </PermissionButton>
+          <Button variant="outline" size="sm" className="h-9" onClick={refresh} title="Refresh Data">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <PermissionButton 
+            permission="Permissions.Products.Create"
             onClick={() => openForm()} 
-            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+            aria-label="Add Product"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm h-9 ml-2"
           >
             <Plus className="w-4 h-4 mr-2" />
             Add Product
-          </Button>
-        )}
+          </PermissionButton>
+        </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-          <form onSubmit={onSearchSubmit} className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, code, SKU, or barcode..."
-              className="pl-9 bg-white border-slate-200 focus-visible:ring-indigo-500/20"
-            />
-          </form>
-        </div>
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200/60 overflow-hidden flex flex-col relative">
+        <DataTableToolbar 
+          searchQuery={searchInput}
+          onSearchChange={setSearchInput}
+          onSearchSubmit={handleSearch}
+          searchPlaceholder="Search by name, code, SKU, or barcode..."
+          hasSelections={hasSelections}
+          selectedCount={selectedRowIds.size}
+          onDeleteSelected={() => setIsDeleteOpen(true)}
+          onCancelSelection={() => setSelectedRowIds(new Set())}
+          itemTypeName="products"
+          deletePermission="Permissions.Products.Delete"
+        />
 
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="min-w-[1000px] w-full table-fixed">
             <TableHeader>
               <TableRow className="bg-slate-50/80 hover:bg-slate-50/80">
+                <TableHead className="w-[50px] pl-4">
+                  <Checkbox 
+                    checked={!!(data && data.items.length > 0 && selectedRowIds.size === data.items.length)}
+                    onCheckedChange={handleSelectAll}
+                    aria-label="Select all"
+                  />
+                </TableHead>
                 <TableHead className="w-[80px]">Image</TableHead>
-                <SortableHeader label="Product Name" column="Name" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
-                <SortableHeader label="Code / SKU" column="ProductCode" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
-                <SortableHeader label="Brand" column="Brand" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
-                <SortableHeader label="Category" column="Category" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
-                <SortableHeader label="Selling Price" column="SellingPrice" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} className="text-right" />
-                <SortableHeader label="Status" column="Status" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
-                <TableHead className="text-right pr-6">Actions</TableHead>
+                <SortableHeader label="Product Name" field="Name" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="w-[200px]" />
+                <SortableHeader label="Code / SKU" field="ProductCode" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="w-[150px]" />
+                <SortableHeader label="Brand" field="Brand" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="w-[120px]" />
+                <SortableHeader label="Category" field="Category" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="w-[140px]" />
+                <SortableHeader label="Selling Price" field="SellingPrice" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="text-right w-[120px]" />
+                <SortableHeader label="Status" field="Status" currentSortBy={queryParams.sortBy} currentSortOrder={queryParams.sortOrder} onSort={toggleSort} className="w-[100px]" />
+                <TableHead className="text-right pr-6 w-[120px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-64">
-                    <LoadingView />
-                  </TableCell>
-                </TableRow>
-              ) : error ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-64">
-                    <ErrorView message={error} onRetry={refresh} />
-                  </TableCell>
-                </TableRow>
-              ) : data.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-64">
-                    <EmptyView 
-                      icon={Box}
-                      title="No products found" 
-                      description={search ? "Try adjusting your search query." : "Add your first product to get started."}
-                      action={canCreate ? { label: "Add Product", onClick: () => openForm() } : undefined}
-                    />
-                  </TableCell>
-                </TableRow>
-              ) : (
-                data.map((product) => (
-                  <TableRow key={product.id} className="group hover:bg-slate-50/50 transition-colors">
-                    <TableCell>
-                      {product.imageUrl ? (
-                        <div className="h-10 w-10 rounded-md overflow-hidden bg-slate-100 border border-slate-200">
-                          <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-                        </div>
-                      ) : (
-                        <div className="h-10 w-10 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400">
-                          <ImageIcon className="h-5 w-5" />
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-medium text-slate-900">{product.name}</TableCell>
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-slate-700">{product.productCode}</span>
-                        <span className="text-xs text-slate-500">{product.sku}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-slate-600">{product.brand?.name || "-"}</TableCell>
-                    <TableCell className="text-slate-600">{product.category?.name || "-"}</TableCell>
-                    <TableCell className="text-slate-900 font-medium text-right">{formatCurrency(product.sellingPrice)}</TableCell>
-                    <TableCell>
-                      {product.isActive ? (
-                        <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 flex w-fit items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          Active
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 flex w-fit items-center gap-1.5">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                          Inactive
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right pr-6">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-indigo-600" onClick={() => openDetails(product)}>
-                          <Eye className="w-4 h-4" />
-                        </Button>
-                        {canUpdate && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-blue-600" onClick={() => openForm(product)}>
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                        {canDelete && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-500 hover:text-rose-600" onClick={() => openDelete(product)}>
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
+              {renderedRows}
             </TableBody>
           </Table>
         </div>
 
-        {totalPages > 1 && (
+        {data && data.totalPages > 1 && (
           <div className="p-4 border-t border-slate-100">
             <Pagination
-              currentPage={pageNumber}
-              totalPages={totalPages}
-              onPageChange={setPageNumber}
+              data={data}
+              onPageChange={setPage}
             />
           </div>
         )}
@@ -269,7 +306,6 @@ export default function ProductsListPage() {
         onClose={() => setIsFormOpen(false)}
         product={selectedProduct}
         onSubmit={handleCreateOrUpdate}
-        isSubmitting={isSubmitting}
       />
 
       {selectedProduct && (
@@ -280,15 +316,12 @@ export default function ProductsListPage() {
         />
       )}
 
-      <ConfirmDialog
+      <ConfirmDeleteDialog
         isOpen={isDeleteOpen}
         onClose={() => setIsDeleteOpen(false)}
         onConfirm={handleDelete}
-        title="Delete Product"
-        description={`Are you sure you want to delete "${selectedProduct?.name}"? This action cannot be undone.`}
-        confirmText="Delete Product"
-        isDestructive
-        isLoading={isSubmitting}
+        itemName="Product"
+        isLoading={isDeleting}
       />
     </div>
   );

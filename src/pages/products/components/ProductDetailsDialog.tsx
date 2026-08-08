@@ -2,7 +2,7 @@ import { ProductDto } from "@/types/products.types";
 import { Modal } from "@/components/ui/modal";
 import { formatCurrency } from "@/utils/formatters";
 import { Badge } from "@/components/ui/badge";
-import { Image as ImageIcon } from "lucide-react";
+import { ImageWithFallback } from "@/components/ui/image-with-fallback";
 
 interface ProductDetailsDialogProps {
   isOpen: boolean;
@@ -21,11 +21,7 @@ export function ProductDetailsDialog({ isOpen, onClose, product }: ProductDetail
       <div className="space-y-6">
         <div className="flex gap-4">
           <div className="flex-shrink-0 w-24 h-24 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center text-slate-400">
-            {product.imageUrl ? (
-              <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
-            ) : (
-              <ImageIcon className="w-8 h-8" />
-            )}
+            <ImageWithFallback src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
           </div>
           <div className="flex-grow">
             <div className="flex justify-between items-start">

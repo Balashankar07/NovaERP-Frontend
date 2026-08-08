@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-import { Package, ShoppingCart, Truck, AlertCircle, Boxes } from "lucide-react";
+import { AlertCircle, Boxes } from "lucide-react";
 import { InventoryReportDto } from "@/types/reports.types";
 import { WidgetState } from "@/hooks/use-dashboard-data";
 

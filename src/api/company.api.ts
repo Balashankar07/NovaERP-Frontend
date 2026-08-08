@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import type {
   Company,
@@ -13,49 +13,30 @@ export const companyApi = {
   /**
    * GET /api/Company
    */
-  getAll: async (): Promise<Company[]> => {
-    const response = await apiClient.get<any>(
-      API_ENDPOINTS.COMPANY.BASE
-    );
-    return response.data.data;
-  },
+  getAll: (): Promise<Company[]> => 
+    api.get<Company[]>(API_ENDPOINTS.COMPANY.BASE),
 
   /**
    * GET /api/Company/{id}
    */
-  getById: async (id: string): Promise<Company> => {
-    const response = await apiClient.get<any>(
-      API_ENDPOINTS.COMPANY.BY_ID(id)
-    );
-    return response.data.data;
-  },
+  getById: (id: string): Promise<Company> => 
+    api.get<Company>(API_ENDPOINTS.COMPANY.BY_ID(id)),
 
   /**
    * POST /api/Company
    */
-  create: async (data: CreateCompanyRequest): Promise<Company> => {
-    const response = await apiClient.post<any>(
-      API_ENDPOINTS.COMPANY.BASE,
-      data
-    );
-    return response.data.data;
-  },
+  create: (data: CreateCompanyRequest): Promise<Company> => 
+    api.post<Company>(API_ENDPOINTS.COMPANY.BASE, data),
 
   /**
    * PUT /api/Company/{id}
    */
-  update: async (id: string, data: UpdateCompanyRequest): Promise<Company> => {
-    const response = await apiClient.put<any>(
-      API_ENDPOINTS.COMPANY.BY_ID(id),
-      data
-    );
-    return response.data.data;
-  },
+  update: (id: string, data: UpdateCompanyRequest): Promise<Company> => 
+    api.put<Company>(API_ENDPOINTS.COMPANY.BY_ID(id), data),
 
   /**
    * DELETE /api/Company/{id}
    */
-  delete: async (id: string): Promise<void> => {
-    await apiClient.delete(API_ENDPOINTS.COMPANY.BY_ID(id));
-  },
+  delete: (id: string): Promise<void> => 
+    api.delete<void>(API_ENDPOINTS.COMPANY.BY_ID(id)),
 };

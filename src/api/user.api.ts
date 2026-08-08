@@ -1,4 +1,4 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "@/api/endpoints";
 import type { User, CreateUserRequest, UpdateUserRequest } from "@/types";
 
@@ -9,43 +9,30 @@ export const userApi = {
   /**
    * GET /api/User
    */
-  getAll: async (): Promise<User[]> => {
-    const response = await apiClient.get<any>(API_ENDPOINTS.USER.BASE);
-    return response.data.data;
-  },
+  getAll: (): Promise<User[]> => 
+    api.get<User[]>(API_ENDPOINTS.USER.BASE),
 
   /**
    * GET /api/User/{id}
    */
-  getById: async (id: string): Promise<User> => {
-    const response = await apiClient.get<any>(
-      API_ENDPOINTS.USER.BY_ID(id)
-    );
-    return response.data.data;
-  },
+  getById: (id: string): Promise<User> => 
+    api.get<User>(API_ENDPOINTS.USER.BY_ID(id)),
 
   /**
    * POST /api/User
    */
-  create: async (data: CreateUserRequest): Promise<User> => {
-    const response = await apiClient.post<any>(
-      API_ENDPOINTS.USER.BASE,
-      data
-    );
-    return response.data.data;
-  },
+  create: (data: CreateUserRequest): Promise<User> => 
+    api.post<User>(API_ENDPOINTS.USER.BASE, data),
 
   /**
    * PUT /api/User/{id}
    */
-  update: async (id: string, data: UpdateUserRequest): Promise<void> => {
-    await apiClient.put(API_ENDPOINTS.USER.BY_ID(id), data);
-  },
+  update: (id: string, data: UpdateUserRequest): Promise<void> => 
+    api.put<void>(API_ENDPOINTS.USER.BY_ID(id), data),
 
   /**
    * DELETE /api/User/{id}
    */
-  delete: async (id: string): Promise<void> => {
-    await apiClient.delete(API_ENDPOINTS.USER.BY_ID(id));
-  },
+  delete: (id: string): Promise<void> => 
+    api.delete<void>(API_ENDPOINTS.USER.BY_ID(id)),
 };

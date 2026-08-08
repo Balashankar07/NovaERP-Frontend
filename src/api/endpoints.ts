@@ -6,6 +6,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: "/Auth/login",
     ME: "/Auth/me",
+    CHANGE_PASSWORD: "/Auth/change-password",
   },
 
   // Company Management
@@ -18,6 +19,7 @@ export const API_ENDPOINTS = {
   USER: {
     BASE: "/User",
     BY_ID: (id: string) => `/User/${id}`,
+    UPLOAD_AVATAR: (id: string) => `/User/${id}/avatar`,
   },
 
   // Role Management

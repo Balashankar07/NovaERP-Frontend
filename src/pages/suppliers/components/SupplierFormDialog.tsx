@@ -1,12 +1,17 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SupplierDto } from "@/types/suppliers.types";
+import { Loader2 } from "lucide-react";
+
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
+
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -32,7 +37,7 @@ const supplierSchema = z.object({
   currency: z.string().max(10).optional().or(z.literal("")),
   creditLimit: z.number().min(0, "Must be positive").optional().or(z.nan()),
   notes: z.string().optional().or(z.literal("")),
-  isActive: z.boolean().default(true),
+  isActive: z.boolean(),
 });
 
 type SupplierFormValues = z.infer<typeof supplierSchema>;
@@ -41,8 +46,7 @@ interface SupplierFormDialogProps {
   isOpen: boolean;
   onClose: () => void;
   supplier?: SupplierDto;
-  onSubmit: (data: any) => void;
-  isSubmitting: boolean;
+  onSubmit: (data: any) => Promise<void>;
 }
 
 export function SupplierFormDialog({
@@ -50,8 +54,8 @@ export function SupplierFormDialog({
   onClose,
   supplier,
   onSubmit,
-  isSubmitting,
 }: SupplierFormDialogProps) {
+  const isEditing = !!supplier;
   const form = useForm<SupplierFormValues>({
     resolver: zodResolver(supplierSchema),
     defaultValues: {
@@ -130,13 +134,15 @@ export function SupplierFormDialog({
     }
   }, [isOpen, supplier, form]);
 
-  const handleSubmit = (values: SupplierFormValues) => {
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
+
+  const handleSubmit = withValidation(async (values) => {
     const payload = {
       ...values,
       creditLimit: isNaN(values.creditLimit as number) ? null : values.creditLimit,
     };
-    onSubmit(payload);
-  };
+    await onSubmit(payload);
+  });
 
   return (
     <Modal
@@ -150,7 +156,8 @@ export function SupplierFormDialog({
       }
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" noValidate>
+          <ValidationSummary errors={globalErrors} />
           <ScrollArea className="h-[60vh] pr-4 -mr-4">
             <div className="space-y-8">
               
@@ -453,6 +460,7 @@ export function SupplierFormDialog({
                         <Checkbox
                           checked={field.value}
                           onCheckedChange={field.onChange}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <div className="space-y-1 leading-none">
@@ -473,8 +481,9 @@ export function SupplierFormDialog({
             <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-              {isSubmitting ? "Saving..." : "Save Supplier"}
+            <Button type="submit" disabled={isSubmitting || !form.formState.isDirty} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Supplier" : "Save Supplier")}
             </Button>
           </div>
         </form>

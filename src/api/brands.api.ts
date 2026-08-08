@@ -1,59 +1,36 @@
-import apiClient from "@/lib/axios";
+import { api } from "@/lib/api-helper";
 import { API_ENDPOINTS } from "./endpoints";
-import { ApiResponse, PaginatedResponse, PaginationParams } from "@/types/api.types";
 import { BrandDto, CreateBrandDto, UpdateBrandDto } from "@/types/brands.types";
+import { PaginatedResponse, PaginationParams } from "@/types/api.types";
 
 export const brandsApi = {
   /**
-   * Get all brands with pagination, search, and sorting
+   * Retrieves a paginated list of brands based on search, sorting, and pagination parameters.
    */
-  getAll: async (params?: PaginationParams) => {
-    const response = await apiClient.get<ApiResponse<PaginatedResponse<BrandDto>>>(
-      API_ENDPOINTS.BRANDS.BASE,
-      { params }
-    );
-    return response.data;
-  },
+  getAll: (params?: PaginationParams) => 
+    api.get<PaginatedResponse<BrandDto>>(API_ENDPOINTS.BRANDS.BASE, { params }),
 
   /**
-   * Get a brand by ID
+   * Retrieves a single brand by its unique identifier.
    */
-  getById: async (id: string) => {
-    const response = await apiClient.get<ApiResponse<BrandDto>>(
-      API_ENDPOINTS.BRANDS.BY_ID(id)
-    );
-    return response.data;
-  },
+  getById: (id: string) => 
+    api.get<BrandDto>(API_ENDPOINTS.BRANDS.BY_ID(id)),
 
   /**
-   * Create a new brand
+   * Creates a new brand.
    */
-  create: async (data: CreateBrandDto) => {
-    const response = await apiClient.post<ApiResponse<BrandDto>>(
-      API_ENDPOINTS.BRANDS.BASE,
-      data
-    );
-    return response.data;
-  },
+  create: (data: CreateBrandDto) => 
+    api.post<BrandDto>(API_ENDPOINTS.BRANDS.BASE, data),
 
   /**
-   * Update an existing brand
+   * Updates an existing brand by its unique identifier.
    */
-  update: async (id: string, data: UpdateBrandDto) => {
-    const response = await apiClient.put<ApiResponse<BrandDto>>(
-      API_ENDPOINTS.BRANDS.BY_ID(id),
-      data
-    );
-    return response.data;
-  },
+  update: (id: string, data: UpdateBrandDto) => 
+    api.put<BrandDto>(API_ENDPOINTS.BRANDS.BY_ID(id), data),
 
   /**
-   * Delete a brand
+   * Deletes a brand by its unique identifier.
    */
-  delete: async (id: string) => {
-    const response = await apiClient.delete<void>(
-      API_ENDPOINTS.BRANDS.BY_ID(id)
-    );
-    return response.data;
-  },
+  delete: (id: string) => 
+    api.delete<boolean>(API_ENDPOINTS.BRANDS.BY_ID(id)),
 };

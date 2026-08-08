@@ -25,7 +25,7 @@ export interface PaginatedResponse<T> {
 export interface PaginationParams {
   pageNumber?: number;
   pageSize?: number;
-  searchTerm?: string;
+  search?: string;
   sortBy?: string;
-  sortDirection?: "asc" | "desc";
+  sortOrder?: "asc" | "desc";
 }

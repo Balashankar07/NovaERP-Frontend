@@ -1,4 +1,6 @@
 import { Bell, Search, LogOut, User, Settings, Sparkles, Moon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "@/routes";
 import { useAuth } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -14,10 +16,19 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Header() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const getInitials = (name?: string) => {
-    if (!name) return "SA";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().substring(0, 2);
+  const getInitials = (email?: string) => {
+    if (!email) return "SA";
+    const namePart = email.split("@")[0];
+    return namePart.substring(0, 2).toUpperCase();
+  };
+
+  const getDisplayName = (email?: string) => {
+    if (!email) return "System Administrator";
+    const namePart = email.split("@")[0];
+    // Capitalize first letter
+    return namePart.charAt(0).toUpperCase() + namePart.slice(1);
   };
 
   return (
@@ -69,9 +80,9 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="relative h-9 w-9 rounded-full ml-1">
               <Avatar className="h-9 w-9 border border-slate-200 shadow-sm">
-                <AvatarImage src="" alt={user?.userName} />
+                <AvatarImage src="" alt={getDisplayName(user?.email)} />
                 <AvatarFallback className="bg-indigo-50 text-indigo-700 text-xs font-semibold">
-                  {getInitials(user?.userName)}
+                  {getInitials(user?.email)}
                 </AvatarFallback>
               </Avatar>
             </Button>
@@ -79,18 +90,18 @@ export function Header() {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal p-3">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-semibold text-slate-900 leading-none">{user?.userName || "System Administrator"}</p>
+                <p className="text-sm font-semibold text-slate-900 leading-none">{getDisplayName(user?.email)}</p>
                 <p className="text-[11px] leading-none text-slate-500 mt-1.5">
                   {user?.role || "Super Admin"}
                 </p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="bg-slate-100" />
-            <DropdownMenuItem className="text-[13px] text-slate-700 cursor-pointer">
+            <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE)} className="text-[13px] text-slate-700 cursor-pointer">
               <User className="mr-2 h-4 w-4 text-slate-400" />
               <span>My Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem className="text-[13px] text-slate-700 cursor-pointer">
+            <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE)} className="text-[13px] text-slate-700 cursor-pointer">
               <Settings className="mr-2 h-4 w-4 text-slate-400" />
               <span>Preferences</span>
             </DropdownMenuItem>

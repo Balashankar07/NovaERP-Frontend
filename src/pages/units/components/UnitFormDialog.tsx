@@ -3,6 +3,10 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2 } from "lucide-react";
+
+import { useFormValidation } from "@/hooks/use-form-validation";
+import { ValidationSummary } from "@/components/ui/ValidationSummary";
+
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,10 +22,10 @@ import {
 import { UnitDto, CreateUnitDto, UpdateUnitDto } from "@/types/units.types";
 
 const unitSchema = z.object({
-  name: z.string().min(1, "Unit name is required").max(100, "Name is too long"),
-  abbreviation: z.string().min(1, "Abbreviation is required").max(10, "Abbreviation is too long"),
-  description: z.string().max(500, "Description is too long").nullable().optional(),
-  isActive: z.boolean().default(true),
+  name: z.string().min(1, "Unit name is required"),
+  abbreviation: z.string().min(1, "Abbreviation is required"),
+  description: z.string().nullable(),
+  isActive: z.boolean(),
 });
 
 type UnitFormValues = z.infer<typeof unitSchema>;
@@ -31,10 +35,9 @@ interface UnitFormDialogProps {
   onClose: () => void;
   onSubmit: (data: CreateUnitDto | UpdateUnitDto) => Promise<void>;
   unit?: UnitDto | null;
-  isLoading?: boolean;
 }
 
-export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: UnitFormDialogProps) {
+export function UnitFormDialog({ isOpen, onClose, onSubmit, unit }: UnitFormDialogProps) {
   const isEditing = !!unit;
 
   const form = useForm<UnitFormValues>({
@@ -68,7 +71,9 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
     }
   }, [isOpen, unit, form]);
 
-  const handleSubmit = async (values: UnitFormValues) => {
+  const { globalErrors, withValidation, isSubmitting } = useFormValidation({ form });
+
+  const handleSubmit = withValidation(async (values) => {
     if (isEditing) {
       await onSubmit({
         name: values.name,
@@ -83,19 +88,20 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
         description: values.description || null,
       } as CreateUnitDto);
     }
-  };
+  });
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={() => {
-        if (!isLoading) onClose();
+        if (!isSubmitting) onClose();
       }}
       title={isEditing ? "Edit Unit" : "Create Unit"}
       description={isEditing ? "Update the details of the unit of measurement." : "Add a new unit of measurement to the system."}
     >
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6" noValidate>
+          <ValidationSummary errors={globalErrors} />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -104,7 +110,7 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
                 <FormItem>
                   <FormLabel>Unit Name <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Kilogram" {...field} disabled={isLoading} />
+                    <Input placeholder="e.g., Kilogram" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -118,7 +124,7 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
                 <FormItem>
                   <FormLabel>Abbreviation <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., kg" {...field} disabled={isLoading} />
+                    <Input placeholder="e.g., kg" {...field} disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -137,7 +143,7 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
                     placeholder="Brief description of the unit..." 
                     {...field} 
                     value={field.value || ""} 
-                    disabled={isLoading} 
+                    disabled={isSubmitting} 
                   />
                 </FormControl>
                 <FormMessage />
@@ -155,7 +161,7 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      disabled={isLoading}
+                      disabled={isSubmitting}
                       className="data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
                     />
                   </FormControl>
@@ -175,23 +181,17 @@ export function UnitFormDialog({ isOpen, onClose, onSubmit, unit, isLoading }: U
               type="button"
               variant="outline"
               onClick={onClose}
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || !form.formState.isDirty}
+              disabled={isSubmitting || !form.formState.isDirty}
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
             >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save Unit"
-              )}
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSubmitting ? (isEditing ? "Updating..." : "Creating...") : (isEditing ? "Update Unit" : "Save Unit")}
             </Button>
           </div>
         </form>
